@@ -6,9 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract P2PLending is ERC721("Embark Loan", "EMK") {
 
-    constructor(){
-
-    }
+    constructor(){}
     
     using SafeMath for uint256;
     using SafeMath for uint;
