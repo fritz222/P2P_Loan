@@ -202,7 +202,7 @@ abstract contract P2PLending is ERC721 {
         loan.amount_paid += interest;
 
         // Extra payment after interest is paid
-        if(amount>0)
+        if(amount > 0)
         {
             loan.principal_amount -= amount;
             loan.amount_paid += amount;
