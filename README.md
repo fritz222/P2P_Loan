@@ -2,4 +2,4 @@
 
 contracts for marketplace
 
-install: nppm install
+install: npm install
