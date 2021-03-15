@@ -3,7 +3,7 @@ pragma solidity ^0.7.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-abstract contract P2PLending is ERC721 {
+contract P2PLending is ERC721("Embark Loan", "EMK") {
 
     constructor() {}
     
@@ -154,7 +154,8 @@ abstract contract P2PLending is ERC721 {
         hasOngoingInvestment[msg.sender] = true;
     }
 
-    function repayLoan(uint amount, uint estimatedInterest, uint timeSinceLastPayment) public{
+    function repayLoan(uint amount, uint amountWithInterest, uint timeSinceLastPayment) public{
+        //amount with interest: rest amount
         //First check if the payer has enough money
         require(balances[msg.sender] >= amount);
 
@@ -180,18 +181,15 @@ abstract contract P2PLending is ERC721 {
         uint checkpoint = loan.monthlyCheckpoint;
         uint n = 12; //Number of times loan is compounded annually
 
-
-        uint amountWithInterest = estimatedInterest;
-
         //Get just the interest for that month
         uint interest = amountWithInterest - p;
         uint t = timeSinceLastPayment;
 
         //Payable Amount should not exceed the amountWithInterest
-        require(amountWithInterest>=amount);
+        require(amountWithInterest >= amount);
 
         //Payable amount should be at least equal to monthly interest
-        require(amount>=interest);
+        require(amount >= interest);
 
         // Update balance for interest first
         balances[msg.sender] -= interest;
