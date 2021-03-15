@@ -1,3 +1,4 @@
+//SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.7.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -5,20 +6,22 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 abstract contract P2PLending is ERC721 {
 
-    constructor() {}
+    constructor(){
+
+    }
     
     using SafeMath for uint256;
     using SafeMath for uint;
 
     // Structs
     struct Investor{
-        address investor_public_key;
+        address investor_address;
         string name;
         bool EXISTS;
     }
 
     struct Borrower{
-        address borrower_public_key;
+        address borrower_address;
         string name;
         bool EXISTS;
     }
@@ -33,7 +36,6 @@ abstract contract P2PLending is ERC721 {
         uint credit_amount; // Loan amount
         uint interest_rate; //From form
         string otherData; // Encoded string with delimiters (~)
-
     }
 
     struct Loan{
@@ -63,18 +65,18 @@ abstract contract P2PLending is ERC721 {
     uint numApplications;
     uint numLoans;
 
-    mapping(uint => LoanApplication) public applications;
+    mapping(uint => LoanApplication) public applications; 
     mapping(uint => Loan) public loans;
 
     mapping(address => bool) hasOngoingLoan;
     mapping(address => bool) hasOngoingApplication;
     mapping(address => bool) hasOngoingInvestment;
 
-    function isBorrower(address account) public returns (bool) {return borrowers[account].EXISTS;}
-    function getNumApplications() public returns (uint) { return numApplications;}
-    function getNumLoans() public returns (uint) { return numLoans;}
-    function isInvestor(address account) public returns (bool) {return investors[account].EXISTS;}
-    function getTime() public returns (uint){return block.timestamp;}
+    function isBorrower(address account) public view returns (bool) {return borrowers[account].EXISTS;}
+    function getNumApplications() public view returns (uint) { return numApplications;}
+    function getNumLoans() public view returns (uint) { return numLoans;}
+    function isInvestor(address account) public view returns (bool) {return investors[account].EXISTS;}
+    function getTime() private view returns (uint){return block.timestamp;}
 
     // Methods
     function lending() public{
@@ -85,7 +87,7 @@ abstract contract P2PLending is ERC721 {
     function createInvestor(string memory name) public{
         Investor memory investor;
         investor.name = name;
-        investor.investor_public_key = msg.sender;
+        investor.investor_address = msg.sender;
         investor.EXISTS = true;
         require (borrowers[msg.sender].EXISTS != true);
         investors[msg.sender] = investor;
@@ -96,7 +98,7 @@ abstract contract P2PLending is ERC721 {
     function createBorrower(string memory name) public{
         Borrower memory borrower;
         borrower.name = name;
-        borrower.borrower_public_key = msg.sender;
+        borrower.borrower_address = msg.sender;
         borrower.EXISTS = true;
         require (investors[msg.sender].EXISTS != true);
         borrowers[msg.sender] = borrower;
@@ -105,7 +107,7 @@ abstract contract P2PLending is ERC721 {
         balances[msg.sender] = 0;
     }
 
-    function viewBalance() public returns (uint){
+    function viewBalance() public view returns (uint){
         return balances[msg.sender];
     }
 
@@ -126,7 +128,6 @@ abstract contract P2PLending is ERC721 {
     }
 
     function createApplication(uint duration, uint interest_rate, uint credit_amount, string memory otherData) public{
-
         require(hasOngoingLoan[msg.sender] == false);
         require(hasOngoingApplication[msg.sender] == false);
         require(isBorrower(msg.sender));
@@ -176,16 +177,16 @@ abstract contract P2PLending is ERC721 {
 
         //Get some params fromt the loan
         uint p = loan.principal_amount;
-        uint r = loan.interest_rate;
-        uint checkpoint = loan.monthlyCheckpoint;
-        uint n = 12; //Number of times loan is compounded annually
+        // uint r = loan.interest_rate;
+        // uint checkpoint = loan.monthlyCheckpoint;
+        // uint n = 12; //Number of times loan is compounded annually
 
 
         uint amountWithInterest = estimatedInterest;
 
         //Get just the interest for that month
         uint interest = amountWithInterest - p;
-        uint t = timeSinceLastPayment;
+        // uint t = timeSinceLastPayment;
 
         //Payable Amount should not exceed the amountWithInterest
         require(amountWithInterest>=amount);
@@ -221,17 +222,17 @@ abstract contract P2PLending is ERC721 {
         }
     }
 
-    function ifApplicationOpen(uint index) public returns (bool){
+    function ifApplicationOpen(uint index) public view returns (bool){
         LoanApplication memory app = applications[index];
         if(app.openApp) return true; else return false;
     }
 
-    function ifLoanOpen(uint index) public returns (bool){
+    function ifLoanOpen(uint index) public view returns (bool){
         Loan memory loan = loans[index];
         if (loan.openLoan == true) return true; else return false;
     }
 
-    function getApplicationData(uint index) public returns (uint[] memory numericalData , string memory otherData, address){
+    function getApplicationData(uint index) public view returns (uint[] memory, string memory, address){
         string memory otherData = applications[index].otherData;
         uint[] memory numericalData = new uint[](4);
         numericalData[0] = index;
@@ -243,7 +244,7 @@ abstract contract P2PLending is ERC721 {
         return (numericalData, otherData, borrower);
     }
 
-    function getLoanData(uint index) public returns (uint[] memory numericalData, address, address){
+    function getLoanData(uint index) public view returns (uint[] memory, address, address){
         uint[] memory numericalData = new uint[](9);
         numericalData[0] = index;
         numericalData[1] = loans[index].interest_rate;
