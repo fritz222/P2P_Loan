@@ -1,11 +1,7 @@
 const LoanAuction = artifacts.require("LoanAuction");
+const Lending = artifacts.require("P2PLending");
 
 module.exports = function(deployer) {
-  deployer.deploy(LoanAuction);
-};
-
-// const Lending = artifacts.require("P2Plending");
-
-// module.exports = function(deployer) {
-//   deployer.deploy(Lending);
-// };
+   deployer.deploy(LoanAuction);
+   deployer.deploy(Lending);
+  };

@@ -24,12 +24,12 @@ contract("LoanAuction", function(accounts) {
 
     it('has a name', async () => {
       const name = await contract.name()
-      assert.equal(name, 'DART')
+      assert.equal(name, 'Embark Loan Auction')
     })
 
     it('has a symbol', async () => {
       const symbol = await contract.symbol()
-      assert.equal(symbol, 'ART')
+      assert.equal(symbol, 'EMKa')
     })
 
   })
