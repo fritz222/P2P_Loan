@@ -1,6 +1,5 @@
 const { assert } = require("chai");
 
-
 const P2PLending = artifacts.require("P2PLending");
 
 contract("P2PLending", function(accounts) {
@@ -10,16 +9,39 @@ contract("P2PLending", function(accounts) {
   console.log('Lender Account: ' + AccountTwo)
     
   before(async () => {
-		contract = await P2PLending.deployed();
+		p2p_lending_contract = await P2PLending.deployed();
   });
 
   describe('deployment', async () => {
     it('deploys successfully', async () => {
-      const address = contract.address
-      assert.notEqual(address, 0x0)
-      assert.notEqual(address, '')
-      assert.notEqual(address, null)
-      assert.notEqual(address, undefined)
-    })
+
+      const p2p_address = p2p_lending_contract.address
+      assert.notEqual(p2p_address, 0x0)
+      assert.notEqual(p2p_address, '')
+      assert.notEqual(p2p_address, null)
+      assert.notEqual(p2p_address, undefined)
+    });
+
+    it('has a name', async () => {
+      const name = await p2p_lending_contract.name()
+      assert.equal(name, 'Embark Loan')
+    });
   })
+
+  it("", async() => {
+    // Arrange
+    let err = null;
+  
+    // Act
+    try {
+      await p2p_lending_contract.withdraw(10, { from: AccountOne });
+    } catch (error) {
+      err = error;
+    }
+    //console.log(tTokenURI);
+    // Assert
+    assert.isNotNull(err);
+  })
+
 });
+
