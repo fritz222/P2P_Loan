@@ -38,7 +38,7 @@ contract LoanAuction is ERC721 {
     }
 
 
-    constructor() public ERC721("Embark Loan Auction", "EMKa")  //Initializing ERC721 
+    constructor() ERC721("Embark Loan Auction", "EMKa")  //Initializing ERC721 
     {   
         owner=msg.sender;
     }

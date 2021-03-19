@@ -13,21 +13,6 @@ contract("P2PLending", function(accounts) {
 		contract = await P2PLending.deployed();
   });
 
-  it("Bidder with Account 1 should be able to withdraw 1eth", async() => {
-    // Arrange
-    let err = null;
-  
-    // Act
-    try {
-      await contract.withdraw(0, tTokenURI, 1, { from: AccountOne });
-    } catch (error) {
-      err = error;
-    }
-    //console.log(tTokenURI);
-    // Assert
-    assert.isNotNull(err);
-  });
-
   describe('deployment', async () => {
     it('deploys successfully', async () => {
       const address = contract.address
@@ -37,5 +22,4 @@ contract("P2PLending", function(accounts) {
       assert.notEqual(address, undefined)
     })
   })
-
 });
