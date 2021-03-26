@@ -5,12 +5,15 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./helper/BNum.sol";
+import "./helper/Calculations.sol";
 
-contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
+contract P2PLending is ERC721("Embark Loan", "EMK") {
 
     
-
+    using ABDKMath64x64 for uint256;
+    using ABDKMath64x64 for uint128;
+    using ABDKMath64x64 for uint;
+    using ABDKMath64x64 for int128;
     // using ABDKMath64x64 for int;
     using SafeMath for uint256;
     using SafeMath for uint;
@@ -21,14 +24,13 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
         uint loanId;   //NFT Id
         address borrower; // Address of borrower
         uint max_interest_rate;
+        uint duration;
         uint principal_amount;
         uint principal_balance;
         uint amount_paid;
         uint startTime;
         uint yearly_payments;
         uint total_payments;
-        uint total_annuity;
-        uint repaymentsMade;
         Status status;
         bytes32 currency;
         address[] investors_index;
@@ -36,9 +38,8 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
 
     struct Investor{
         address investor_address;
-        uint investor_principal;
+        uint investor_amount;
         uint interest;
-        uint investor_annuity;
         bool paid_in;
         bool exists;
     }
@@ -62,10 +63,10 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
     uint numLoans;
     address admin;
 
-    mapping(uint => Loan) private loans;
-    mapping (address => Investor) private investors;
+    mapping(uint => Loan) public loans;
+    mapping (address => Investor) public investors;
 
-    mapping (bytes32 => Token) private tokens;
+    mapping (bytes32 => Token) public tokens;
     bytes32[] tokenList;
 
     mapping(address => mapping(bytes32 => uint)) public balances;
@@ -84,34 +85,33 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
         tokenList.push(ticker);
     }
 
-  
-     function divisionTest(uint256 _a, uint256 _b) public pure returns (uint){
-       uint result = bdiv(_a, _b);
-
-       return result;
-    }
-
+    // function deposit(uint amount) public{
     
-    function calculateInterest(uint256 interest, uint256 payments, uint256 yearlyPayments, uint256 principal) public pure returns (uint256){
-        uint256 rate = 0;
-        uint256 one = bpow(10,18);
-        uint256[] memory s = new uint256[](4);
-        uint i_period = bdiv(interest, yearlyPayments);
-        uint q_period = badd(i_period, one);
-        
+    // }
 
+    // function withdraw(uint amount) public returns (uint){
+    //     return 0;
+    // }
 
-        s[0] = bpow(q_period, payments);
-        s[1] = bmul(s[0], i_period);
-        s[2] = bsub(s[0],one);
+     function divisionTest(uint256 _a, uint256 _b) public pure returns (int128){
+        int128 result;
+        result =  0;
+        result = _a.divu(_b);
 
-        s[3] = bdiv(s[1],s[2]);
-        rate = bmul(s[3], principal);
-        return rate;
+        return result;
+    }
+
+    function calculateInterest(int128 q, int128 interest, int128 principal, uint256 n) public pure returns (int128){
+        int128 result = 0;
+
+        //int128 t1 = q.pow();
+        result = principal.mul(q.pow(n).mul(interest.div(q.pow(n).sub(int128(1)))));
+
+        return result;
     }
 
 
-    function createLoanApplication(uint _max_interest_rate, uint _credit_amount, uint _yearly_payments, uint _total_payments, bytes32 _currency) public returns(uint256 loanId){ 
+    function createLoanApplication(uint _duration, uint _max_interest_rate, uint _credit_amount, uint _yearly_payments, uint _total_payments, bytes32 _currency) public returns(uint256 loanId){ 
         require(tokens[_currency].tokenAddress != address(0));
         uint256 newId = numLoans.add(1);
         
@@ -120,6 +120,7 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
         _loan.loanId = newId;
         _loan.borrower = msg.sender;
         _loan.max_interest_rate = _max_interest_rate;
+        _loan.duration = _duration;
         _loan.principal_amount = _credit_amount;
         _loan.principal_balance =   _credit_amount;
         _loan.amount_paid =   0;
@@ -128,7 +129,6 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
         _loan.total_payments = _total_payments;
         _loan.status = Status.Application;
         _loan.currency = _currency;
-        _loan.repaymentsMade = 0;
 
         loans[newId] = _loan;
         numLoans = newId;
@@ -149,23 +149,17 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
         loans[_id].status = Status.PayIn;
     }
 
-    function payIn (uint _id, uint256 amount) public {
-        Investor memory inv = investors[msg.sender];
-        require(inv.exists == true, "investor doesnt exist");
-        require(inv.paid_in == false, "already paid in");
-        require(inv.investor_principal == amount*10**18, "wrong amount");
+    function payIn (uint _id, bytes32 ticker, uint256 amount) public {
+        require(investors[msg.sender].exists == true);
+        require(investors[msg.sender].paid_in == false);
+        require(investors[msg.sender].investor_amount == amount);
         address borrower = loans[_id].borrower;
-        bytes32 ticker = loans[_id].currency;
         //transferFrom
         IERC20(tokens[ticker].tokenAddress).transferFrom(
             msg.sender,
             address(this),
             amount
         );
-
-        investors[msg.sender].investor_annuity = calculateInterest(inv.interest, loans[_id].total_payments, loans[_id].yearly_payments, inv.investor_principal);
-
-
         balances[borrower][ticker] = balances[borrower][ticker].add(amount);
         investors[msg.sender].paid_in = true;
     }
@@ -178,13 +172,6 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
             }
         }
 
-        uint total = 0;
-        for(uint j = 0; j < ia.length; j++){
-           total = total.add(investors[ia[j]].investor_annuity);
-        }
-
-
-        loans[_id].total_annuity = total;
         loans[_id].status = Status.Loan;
         loans[_id].startTime = block.timestamp;
         emit newLoanStarted(_id, loans[_id].borrower);
@@ -192,49 +179,21 @@ contract P2PLending is ERC721("Embark Loan", "EMK"), BNum() {
     }
 
 
-    function repayLoan(uint _id, uint amount) public {
-        require(msg.sender == loans[_id].borrower, "only borrower can repay");
-        require(loans[_id].status == Status.Loan, "This loan is not active");
-        require(btoi(bfloor(loans[_id].total_annuity)) == amount, "Wrong amount");
-
-        IERC20(tokens[loans[_id].currency].tokenAddress).transferFrom(
-            loans[_id].borrower,
-            address(this),
-            amount
-        );
-
-        address[] memory ia = loans[_id].investors_index;
-
-        uint paybackAmount = 0;
-        for(uint i = 0; i < ia.length; i++){
-            paybackAmount = btoi(bfloor(investors[ia[i]].investor_annuity));
-
-                IERC20(tokens[loans[_id].currency].tokenAddress).transfer(
-                    investors[ia[i]].investor_address,
-                    paybackAmount
-                );
-            }
-
-        loans[_id].repaymentsMade = loans[_id].repaymentsMade.add(1);
-        if(loans[_id].repaymentsMade == btoi(loans[_id].total_payments)){
-            loans[_id].status = Status.Done;
-        }
+    function repayLoan(uint _id, uint amount, uint amountWithInterest, uint timeSinceLastPayment) public {
+        //amount with interest: rest amount
+        //First check if the payer has enough money
+            // require(balances[msg.sender] >= amount);
+            // require(loans[_id].borrower == msg.sender);
+        //Find the loan
+      
     }
 
     function getLoan(uint256 _id) public view returns (Loan memory){
        return loans[_id];
     }
 
-    function getStatus(uint256 _id) public view returns (Status){
-        return loans[_id].status;
-    }
-
     function getInvestor(address _investor_address) public view returns (Investor memory){
         return investors[_investor_address];
-    }
-
-    function getBalance(address add, bytes32 ticker) public view returns (uint256){
-        return balances[add][ticker];
     }
 
      modifier onlyAdmin() {
