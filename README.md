@@ -1,5 +1,3 @@
-# P2P_Lending_Marketplace
+P2P_Lending_Marketplace
 
-contracts for marketplace
-
-install: npm install
+Prototype example of P2P Loan smart contracts without roles.
